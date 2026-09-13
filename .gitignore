@@ -1,0 +1,27 @@
+node_modules/
+dist/
+build/
+.env.local
+.env.*.local
+
+# Generated benchmark artifacts: local-only, never committed (may contain
+# downloaded result images and could grow large; provenance is the code,
+# not the binaries).
+test-images/results/**
+!test-images/results/.gitkeep
+test-images/contact-sheets/**
+!test-images/contact-sheets/.gitkeep
+benchmark/results/**
+!benchmark/results/.gitkeep
+benchmark/scores/**
+!benchmark/scores/.gitkeep
+
+# Test source portraits are the operator's own synthetic images, not
+# something to publish in this repo's history either.
+test-images/input/*.png
+test-images/input/*.jpg
+test-images/input/*.jpeg
+!test-images/input/.gitkeep
+
+.DS_Store
+*.log

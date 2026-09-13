@@ -1,0 +1,105 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 2rem;
+  background: #111;
+  color: #eee;
+}
+
+.chuku-lab {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.subtitle {
+  color: #999;
+}
+
+.totals {
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.error-banner {
+  background: #4a1414;
+  border: 1px solid #a33;
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+}
+
+.portrait-selector button,
+.hairstyle-card,
+.try-this-style,
+.actions button {
+  cursor: pointer;
+}
+
+.portrait-selector button {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.portrait-selector button.selected {
+  background: #3a6;
+  color: #fff;
+}
+
+.hairstyle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.hairstyle-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  background: #1c1c1c;
+  border: 1px solid #333;
+}
+
+.hairstyle-card.selected {
+  border-color: #3a6;
+}
+
+.hairstyle-category {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.side-by-side {
+  display: flex;
+  gap: 1rem;
+}
+
+.side-by-side img {
+  max-width: 320px;
+  max-height: 320px;
+}
+
+.metrics {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #aaa;
+  margin: 0.5rem 0;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.score-grid label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+}

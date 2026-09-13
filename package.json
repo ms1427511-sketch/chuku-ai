@@ -1,0 +1,41 @@
+{
+  "name": "chuku-ai-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CHUKU AI LAB — isolated R&D benchmark for AI hairstyle generation (LightX). Not integrated with MEKKY.",
+  "scripts": {
+    "dev:server": "node --experimental-strip-types src/server/index.ts",
+    "dev:client": "vite",
+    "build:client": "vite build",
+    "build": "tsc --noEmit -p tsconfig.json && npm run build:client && npm run check:no-secret-leak",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "contact-sheet": "node --experimental-strip-types scripts/generate-contact-sheet.ts",
+    "benchmark:stage-a": "node --experimental-strip-types scripts/run-stage-a-benchmark.ts",
+    "check:no-secret-leak": "node --experimental-strip-types scripts/check-no-secret-leak.ts"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.5",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "eslint": "^9.12.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.8.1",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.2"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  }
+}
