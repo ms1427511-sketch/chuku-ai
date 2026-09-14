@@ -1,37 +1,12 @@
 import { Router } from "express";
 import type { CreateGenerationRequest, FailureFlag, ManualScore } from "../../shared/types.ts";
-import { ChukuError } from "../../shared/errors.ts";
 import { createGeneration, reworkGeneration, historyFor, setFavorite } from "../services/generation-service.ts";
 import { updateRecord } from "../services/storage.ts";
 import { costGuard } from "../services/cost-guard.ts";
 import { config } from "../config/env.ts";
+import { handleError } from "./http-errors.ts";
 
 export const generationsRouter = Router();
-
-function errorStatus(code: string): number {
-  switch (code) {
-    case "GENERATION_LIMIT_REACHED":
-      return 429;
-    case "UNKNOWN_HAIRSTYLE":
-    case "UNKNOWN_PORTRAIT":
-    case "INVALID_IMAGE_PATH":
-    case "UNSUPPORTED_IMAGE_TYPE":
-      return 400;
-    case "MISSING_PROVIDER_CREDENTIAL":
-      return 503;
-    default:
-      return 500;
-  }
-}
-
-function handleError(res: import("express").Response, error: unknown): void {
-  if (error instanceof ChukuError) {
-    res.status(errorStatus(error.code)).json({ error: error.code, message: error.message });
-    return;
-  }
-  // Never forward a raw provider error/stack trace to the client.
-  res.status(500).json({ error: "INTERNAL_ERROR", message: "unexpected server error" });
-}
 
 generationsRouter.get("/generations", async (req, res) => {
   const source = typeof req.query.source === "string" ? req.query.source : undefined;
