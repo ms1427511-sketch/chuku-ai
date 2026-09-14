@@ -8,7 +8,7 @@ import { newRecordId, appendRecord, updateRecord, nextGenerationIndex, downloadR
 import { LightXHairstyleProvider, ProviderCallError } from "../providers/lightx-provider.ts";
 import { config } from "../config/env.ts";
 
-const PORTRAIT_FILENAMES: Record<string, string> = {
+export const PORTRAIT_FILENAMES: Record<string, string> = {
   "portrait-a": "portrait-a.png",
   "portrait-b": "portrait-b.png",
   "portrait-c": "portrait-c.png",
