@@ -2,11 +2,9 @@ import type { GenerationRecord } from "../../shared/types.ts";
 
 export function HistoryList({
   records,
-  favoriteId,
   onSelect,
 }: {
   records: GenerationRecord[];
-  favoriteId: string | null;
   onSelect: (record: GenerationRecord) => void;
 }) {
   if (records.length === 0) {
@@ -19,7 +17,7 @@ export function HistoryList({
           <button type="button" onClick={() => onSelect(r)}>
             #{r.generationIndex} · {r.hairstyleId} · {r.status}
             {r.retryOf ? " · rework" : ""}
-            {r.id === favoriteId ? " · ★" : ""}
+            {r.favorite ? " · ★" : ""}
           </button>
         </li>
       ))}

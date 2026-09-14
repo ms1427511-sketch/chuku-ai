@@ -56,3 +56,7 @@ export function updateScore(id: string, score: ManualScore): Promise<{ generatio
 export function updateFlags(id: string, flags: FailureFlag[]): Promise<{ generation: GenerationRecord }> {
   return request(`/generations/${id}/flags`, { method: "PATCH", body: JSON.stringify({ flags }) });
 }
+
+export function updateFavorite(id: string, favorite: boolean): Promise<{ generation: GenerationRecord }> {
+  return request(`/generations/${id}/favorite`, { method: "PATCH", body: JSON.stringify({ favorite }) });
+}

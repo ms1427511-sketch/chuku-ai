@@ -11,14 +11,12 @@ export function GenerationResult({
   record,
   onRework,
   onChooseThisStyle,
-  isFavorite,
   reworking,
 }: {
   source: PortraitId;
   record: GenerationRecord;
   onRework: () => void;
   onChooseThisStyle: () => void;
-  isFavorite: boolean;
   reworking: boolean;
 }) {
   const url = resultUrl(record);
@@ -51,7 +49,7 @@ export function GenerationResult({
           {reworking ? "Reworking…" : "Rework / Try Again"}
         </button>
         <button type="button" onClick={onChooseThisStyle} disabled={record.status !== "completed"}>
-          {isFavorite ? "★ Chosen" : "Choose This Style"}
+          {record.favorite ? "★ Chosen" : "Choose This Style"}
         </button>
       </div>
     </div>

@@ -59,7 +59,7 @@ vi.mock("../src/server/services/storage.ts", () => ({
   downloadResult: async () => "portrait-a/buzz-cut/generation-1.png",
 }));
 
-const { createGeneration, reworkGeneration } = await import("../src/server/services/generation-service.ts");
+const { createGeneration, reworkGeneration, setFavorite } = await import("../src/server/services/generation-service.ts");
 const { loadHistory } = await import("../src/server/services/storage.ts");
 
 beforeEach(async () => {
@@ -129,5 +129,43 @@ describe("reworkGeneration", () => {
     const originalStillPresent = history.find((r) => r.id === original.id);
     expect(originalStillPresent).toBeDefined();
     expect(originalStillPresent!.status).toBe("completed");
+  });
+});
+
+describe("setFavorite", () => {
+  it("defaults new generations to not favorite", async () => {
+    const record = await createGeneration({ source: "portrait-a", hairstyleId: "buzz-cut" });
+    expect(record.favorite).toBe(false);
+  });
+
+  it("marks a generation favorite", async () => {
+    const record = await createGeneration({ source: "portrait-a", hairstyleId: "buzz-cut" });
+    const updated = await setFavorite(record.id, true);
+    expect(updated.favorite).toBe(true);
+  });
+
+  it("un-favorites any prior favorite for the same source+hairstyle when a new one is chosen", async () => {
+    const first = await createGeneration({ source: "portrait-a", hairstyleId: "buzz-cut" });
+    await setFavorite(first.id, true);
+    const second = await reworkGeneration(first.id);
+
+    await setFavorite(second.id, true);
+
+    const history = await loadHistory();
+    const firstAfter = history.find((r) => r.id === first.id)!;
+    const secondAfter = history.find((r) => r.id === second.id)!;
+    expect(firstAfter.favorite).toBe(false);
+    expect(secondAfter.favorite).toBe(true);
+  });
+
+  it("does not affect favorites for a different source or hairstyle", async () => {
+    const buzz = await createGeneration({ source: "portrait-a", hairstyleId: "buzz-cut" });
+    const pompadour = await createGeneration({ source: "portrait-a", hairstyleId: "pompadour" });
+    await setFavorite(buzz.id, true);
+    await setFavorite(pompadour.id, true);
+
+    const history = await loadHistory();
+    expect(history.find((r) => r.id === buzz.id)!.favorite).toBe(true);
+    expect(history.find((r) => r.id === pompadour.id)!.favorite).toBe(true);
   });
 });

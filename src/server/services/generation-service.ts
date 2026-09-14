@@ -112,6 +112,7 @@ export async function createGeneration(request: CreateGenerationRequest): Promis
     retryOf: request.retryOf ?? null,
     score: null,
     flags: [],
+    favorite: false,
   };
   await appendRecord(record);
 
@@ -144,4 +145,27 @@ export async function historyFor(source?: string, hairstyleId?: string): Promise
   const { loadHistory } = await import("./storage.ts");
   const all = await loadHistory();
   return all.filter((r) => (source ? r.source === source : true) && (hairstyleId ? r.hairstyleId === hairstyleId : true));
+}
+
+/**
+ * At most one favorite per (source, hairstyleId): marking a record favorite
+ * un-favorites any prior favorite for that same pair first, so "choose this
+ * style" always replaces rather than accumulates.
+ */
+export async function setFavorite(id: string, favorite: boolean): Promise<GenerationRecord> {
+  const target = await getRecord(id);
+  if (!target) throw new Error(`no generation record with id ${id}`);
+
+  if (favorite) {
+    const { loadHistory } = await import("./storage.ts");
+    const history = await loadHistory();
+    const priorFavorites = history.filter(
+      (r) => r.id !== id && r.source === target.source && r.hairstyleId === target.hairstyleId && r.favorite,
+    );
+    for (const prior of priorFavorites) {
+      await updateRecord(prior.id, { favorite: false });
+    }
+  }
+
+  return updateRecord(id, { favorite });
 }

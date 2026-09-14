@@ -6,6 +6,7 @@ import {
   fetchHistory,
   fetchTotals,
   reworkGeneration,
+  updateFavorite,
   updateFlags,
   updateScore,
 } from "../api/client.ts";
@@ -24,7 +25,6 @@ export function App() {
   const [selectedHairstyleId, setSelectedHairstyleId] = useState<string | null>(null);
   const [history, setHistory] = useState<GenerationRecord[]>([]);
   const [active, setActive] = useState<GenerationRecord | null>(null);
-  const [favorites, setFavorites] = useState<Record<string, string>>({}); // key: `${source}:${hairstyleId}` -> generationId
   const [totals, setTotals] = useState<BenchmarkTotals | null>(null);
   const [generating, setGenerating] = useState(false);
   const [reworking, setReworking] = useState(false);
@@ -74,10 +74,12 @@ export function App() {
     }
   }
 
-  function handleChooseThisStyle() {
+  async function handleChooseThisStyle() {
     if (!active) return;
-    const key = `${active.source}:${active.hairstyleId}`;
-    setFavorites((prev) => ({ ...prev, [key]: active.id }));
+    const { generation } = await updateFavorite(active.id, true);
+    setActive(generation);
+    const r = await fetchHistory(source);
+    setHistory(r.generations);
   }
 
   async function handleSaveScore(score: ManualScore) {
@@ -92,7 +94,6 @@ export function App() {
     setActive(generation);
   }
 
-  const favoriteId = active ? favorites[`${active.source}:${active.hairstyleId}`] ?? null : null;
   const capReached = totals ? totals.remaining <= 0 : false;
 
   return (
@@ -142,7 +143,6 @@ export function App() {
             record={active}
             onRework={handleRework}
             onChooseThisStyle={handleChooseThisStyle}
-            isFavorite={favoriteId === active.id}
             reworking={reworking}
           />
           <ManualScorePanel record={active} onSaveScore={handleSaveScore} onSaveFlags={handleSaveFlags} />
@@ -151,7 +151,7 @@ export function App() {
 
       <section>
         <h2>History for {source}</h2>
-        <HistoryList records={history} favoriteId={favoriteId} onSelect={setActive} />
+        <HistoryList records={history} onSelect={setActive} />
       </section>
     </main>
   );

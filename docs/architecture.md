@@ -56,9 +56,9 @@ read) is never imported by client code. This is checked two ways:
   reach an HTTP response, so a raw provider error body or stack trace can
   never leak to a client.
 - `src/server/routes/` — `catalog.ts` (hairstyle list), `generations.ts`
-  (create/rework/history/score/flags/totals), `images.ts` (serves local
-  source portraits and downloaded results only — never proxies a remote
-  LightX URL).
+  (create/rework/history/score/flags/favorite/totals), `images.ts` (serves
+  local source portraits and downloaded results only — never proxies a
+  remote LightX URL).
 - `src/server/services/` — `generation-service.ts` (orchestration:
   validation, cost guard, provider call, retry policy, result download),
   `cost-guard.ts` (in-memory hard-cap/retry counter), `image-validation.ts`
@@ -129,3 +129,13 @@ place:
 
 This means one source portrait can be used for many hairstyle generations,
 and every attempt for every style remains independently visible in history.
+
+## Favorite
+
+`GenerationRecord.favorite` is persisted server-side in the same
+`benchmark/results/generations.json` history — not just client UI state, so
+it survives a page reload or a fresh `fetchHistory()` call.
+`generation-service.setFavorite()` enforces at most one favorite per
+(source, hairstyleId): marking a new record favorite first un-favorites any
+prior favorite for that same pair, so "Choose This Style" always replaces
+rather than accumulates. Exposed via `PATCH /generations/:id/favorite`.

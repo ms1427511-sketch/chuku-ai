@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { CreateGenerationRequest, FailureFlag, ManualScore } from "../../shared/types.ts";
 import { ChukuError } from "../../shared/errors.ts";
-import { createGeneration, reworkGeneration, historyFor } from "../services/generation-service.ts";
+import { createGeneration, reworkGeneration, historyFor, setFavorite } from "../services/generation-service.ts";
 import { updateRecord } from "../services/storage.ts";
 import { costGuard } from "../services/cost-guard.ts";
 import { config } from "../config/env.ts";
@@ -84,6 +84,16 @@ generationsRouter.patch("/generations/:id/flags", async (req, res) => {
   try {
     const flags = (req.body as { flags?: FailureFlag[] }).flags ?? [];
     const updated = await updateRecord(req.params.id, { flags });
+    res.json({ generation: updated });
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+generationsRouter.patch("/generations/:id/favorite", async (req, res) => {
+  try {
+    const favorite = Boolean((req.body as { favorite?: boolean }).favorite);
+    const updated = await setFavorite(req.params.id, favorite);
     res.json({ generation: updated });
   } catch (error) {
     handleError(res, error);

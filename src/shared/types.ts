@@ -55,6 +55,8 @@ export interface GenerationRecord {
   retryOf: string | null;
   score: ManualScore | null;
   flags: FailureFlag[];
+  /** At most one favorite per (source, hairstyleId) — see generation-service.setFavorite. */
+  favorite: boolean;
 }
 
 export interface ManualScore {
