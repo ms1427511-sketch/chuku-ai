@@ -139,3 +139,77 @@ it survives a page reload or a fresh `fetchHistory()` call.
 (source, hairstyleId): marking a new record favorite first un-favorites any
 prior favorite for that same pair, so "Choose This Style" always replaces
 rather than accumulates. Exposed via `PATCH /generations/:id/favorite`.
+
+## Product vs. Lab/benchmark separation
+
+The Core Productization phase added a second, entirely separate layer
+alongside the Lab described above — additive, not a replacement. The Lab
+(`storage.ts`, `benchmark/results/generations.json`, `/generations`,
+`/hairstyles`, `cost-guard.ts`) is untouched and remains the benchmark
+console. The product layer is new:
+
+```
+src/server/db/          — SQLite schema, connection, and repos (sessions, generations)
+src/server/services/
+  session-service.ts             — ChukuSession CRUD
+  product-generation-service.ts  — idempotent create, async finalize, restart-recovery reconcile
+  retention-service.ts           — expired-result/session cleanup sweep
+  safe-error-mapping.ts          — internal failure category → public ChukuSafeErrorCode
+src/server/routes/
+  sessions.ts, product-generations.ts, product-results.ts, maintenance.ts, http-errors.ts
+```
+
+Both layers share the same `HairstyleProvider`/`LightXHairstyleProvider`
+and the same `resolveInputPortrait`/`sanitizeErrorMessage` primitives, but
+never share storage: the Lab writes to `benchmark/results/generations.json`
+and `test-images/results/`; the product layer writes to `data/chuku.db` and
+`data/results/` (both gitignored, both runtime-only). See
+`docs/integration-contract.md` for the API surface and
+`docs/retention.md`/`docs/error-model.md` for the rest.
+
+## Persistence
+
+Product session/generation state is stored in SQLite via Node's built-in
+`node:sqlite` (`DatabaseSync`), not a hand-rolled JSON file and not a new
+npm dependency — chosen because it matches this project's existing
+`engines: node>=22.6.0` floor. `src/server/db/connection.ts` loads it via
+`process.getBuiltinModule("node:sqlite")` rather than a static
+`import ... from "node:sqlite"`, specifically to avoid a vite-node module-id
+normalization bug that otherwise breaks under `vitest` (vite-node strips
+the `node:` prefix from any specifier not on its own hardcoded builtins
+allow-list, and the experimental `sqlite` module isn't on it).
+
+- **Bootstrap**: `getDb()` creates `data/` and `data/results/` if missing,
+  opens/creates `data/chuku.db`, sets `PRAGMA journal_mode = WAL`, and runs
+  the schema (`CREATE TABLE IF NOT EXISTS ...`) — safe to run on every
+  startup against an empty or already-populated database.
+- **Concurrency/race-freedom**: `DatabaseSync`'s API is fully synchronous —
+  there is no `await` boundary between statements, so a
+  check-then-insert sequence (e.g. `generations-repo.ts`'s
+  `insertGenerationIfWithinLimit`, used for both the idempotency check and
+  the per-session hard cap) cannot be interleaved by a concurrent request
+  the way the Lab's async JSON read/modify/write (`storage.ts`) can be.
+  This is the reason the product layer uses SQLite rather than another
+  JSON file.
+- **Restart recovery**: `reconcileAllProcessingOnStartup()` runs once at
+  server boot (`index.ts`) and lazily on `GET /generations/:id` /
+  `GET /sessions/:id/generations`
+  (`product-generation-service.ts`'s `reconcileIfProcessing`). For each
+  generation left `"processing"` by a prior process, it makes **at most
+  one** free provider status check (`getGeneration`, never
+  `createGeneration`) — never re-submits a new paid job. Past a 5-minute
+  staleness threshold (well beyond the LightX adapter's own ~60s poll
+  ceiling) with no terminal status, the record is marked `"failed"` /
+  `PROVIDER_TEMPORARY_FAILURE` locally without further provider contact.
+
+## Storage roots
+
+```
+test-images/input/, test-images/results/, test-images/contact-sheets/  — Lab/benchmark, immutable evidence, never touched by product code
+data/chuku.db, data/results/                                            — product persistence, gitignored, runtime-only
+```
+
+Kept structurally separate in `src/server/security/paths.ts` (`TEST_IMAGES_*`
+constants vs. `PRODUCT_*` constants) specifically so a bug in product
+retention cleanup can never delete Lab/benchmark evidence — see
+`docs/retention.md` "Storage-root separation and path safety."
