@@ -4,6 +4,10 @@ build/
 .env.local
 .env.*.local
 
+# Product persistence (sessions/generations DB + downloaded product result
+# assets) — local runtime state, not benchmark evidence, never committed.
+data/
+
 # Generated benchmark artifacts: local-only, never committed (may contain
 # downloaded result images and could grow large; provenance is the code,
 # not the binaries).

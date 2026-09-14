@@ -26,12 +26,30 @@ loadDotEnvLocal();
 
 export const PROJECT_ROOT = ROOT;
 
+function positiveInt(envValue: string | undefined, fallback: number): number {
+  const parsed = Number(envValue);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export const config = {
   port: Number(process.env.CHUKU_PORT ?? 4317),
   host: "127.0.0.1" as const, // never 0.0.0.0 — spec section 2
   lightxApiKey: process.env.LIGHTX_API_KEY?.trim() || null,
+  // Lab/benchmark-only cost guard (src/server/services/cost-guard.ts) —
+  // deliberately separate from the product session guard below, so
+  // Stage A/B benchmark runs never share a limit with real product usage.
   generationHardCap: 15,
   automaticRetryLimit: 1,
+
+  // Product session limits (src/server/services/product-usage-guard.ts).
+  // Safe pilot defaults, not billing rules — see docs/integration-contract.md.
+  includedGenerationsPerSession: positiveInt(process.env.CHUKU_INCLUDED_GENERATIONS, 3),
+  maxGenerationsPerSession: positiveInt(process.env.CHUKU_MAX_GENERATIONS_PER_SESSION, 5),
+
+  // Retention — provisional engineering defaults, REQUIRES_PRODUCT_PRIVACY_APPROVAL
+  // before being treated as policy. See docs/retention.md.
+  sourceRetentionHours: positiveInt(process.env.CHUKU_SOURCE_RETENTION_HOURS, 24),
+  resultRetentionHours: positiveInt(process.env.CHUKU_RESULT_RETENTION_HOURS, 72),
 };
 
 export function hasLightXCredential(): boolean {
