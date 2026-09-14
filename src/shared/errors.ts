@@ -46,3 +46,55 @@ export class MissingProviderCredentialError extends ChukuError {
     super("LIGHTX_API_KEY is not configured.", "MISSING_PROVIDER_CREDENTIAL");
   }
 }
+
+// ---------------------------------------------------------------------------
+// Product session/generation errors (Core Productization phase) — see
+// docs/error-model.md for the full code list and route error-status mapping.
+
+export class SessionNotFoundError extends ChukuError {
+  constructor(id: string) {
+    super(`No session with id ${id}`, "SESSION_NOT_FOUND");
+  }
+}
+
+export class SourceRequiredError extends ChukuError {
+  constructor() {
+    super("This session has no source portrait set yet.", "SOURCE_REQUIRED");
+  }
+}
+
+export class InvalidSourceError extends ChukuError {
+  constructor(sourcePortraitId: string) {
+    super(`Invalid source portrait id: ${sourcePortraitId}`, "INVALID_SOURCE");
+  }
+}
+
+export class UnknownStyleError extends ChukuError {
+  constructor(styleId: string) {
+    super(`Unknown style id: ${styleId}`, "UNKNOWN_STYLE");
+  }
+}
+
+export class GenerationNotFoundError extends ChukuError {
+  constructor(id: string) {
+    super(`No generation with id ${id}`, "GENERATION_NOT_FOUND");
+  }
+}
+
+export class GenerationInProgressError extends ChukuError {
+  constructor(id: string) {
+    super(`Generation ${id} has not completed yet.`, "GENERATION_IN_PROGRESS");
+  }
+}
+
+export class ResultExpiredError extends ChukuError {
+  constructor(id: string) {
+    super(`The result for generation ${id} has expired and was removed.`, "RESULT_EXPIRED");
+  }
+}
+
+export class InvalidOperationError extends ChukuError {
+  constructor(reason: string) {
+    super(reason, "INVALID_OPERATION");
+  }
+}

@@ -98,3 +98,74 @@ export interface BenchmarkTotals {
   hardCap: number;
   remaining: number;
 }
+
+// ---------------------------------------------------------------------------
+// Product session/generation model (Core Productization phase). Distinct
+// from GenerationRecord/BenchmarkTotals above, which remain the Lab's own
+// benchmark-only model — see docs/architecture.md "Product vs. Lab/benchmark
+// separation". These are public API DTOs: they deliberately omit
+// provider-specific fields (provider, providerJobId, raw failureMessage) —
+// see docs/integration-contract.md and docs/error-model.md.
+
+export type ChukuSessionStatus = "active" | "expired";
+
+export interface ChukuSession {
+  id: string;
+  sourcePortraitId: PortraitId | null;
+  createdAt: string;
+  updatedAt: string;
+  /** Governed by CHUKU_SOURCE_RETENTION_HOURS — see docs/retention.md. */
+  expiresAt: string;
+  favoriteGenerationId: string | null;
+  status: ChukuSessionStatus;
+  generationCount: number;
+  includedGenerations: number;
+  maxGenerations: number;
+}
+
+export type ProductGenerationStatus = "queued" | "processing" | "completed" | "failed" | "expired";
+
+/**
+ * Stable, safe error codes for the product API — see docs/error-model.md.
+ * Never a raw provider payload, stack trace, or internal message.
+ */
+export type ChukuSafeErrorCode =
+  | "SESSION_NOT_FOUND"
+  | "SOURCE_REQUIRED"
+  | "INVALID_SOURCE"
+  | "UNKNOWN_STYLE"
+  | "GENERATION_NOT_FOUND"
+  | "GENERATION_LIMIT_REACHED"
+  | "GENERATION_IN_PROGRESS"
+  | "GENERATION_FAILED"
+  | "PROVIDER_TEMPORARY_FAILURE"
+  | "RESULT_EXPIRED"
+  | "INVALID_OPERATION";
+
+export interface ProductGeneration {
+  id: string;
+  sessionId: string;
+  styleId: string;
+  generationIndex: number;
+  status: ProductGenerationStatus;
+  /** Local, server-served path — never a raw provider URL. Null until completed. */
+  resultUrl: string | null;
+  favorite: boolean;
+  safeErrorCode: ChukuSafeErrorCode | null;
+  retryCount: number;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  /** Set only once completed — governed by CHUKU_RESULT_RETENTION_HOURS. */
+  expiresAt: string | null;
+}
+
+export interface CreateSessionSourceRequest {
+  sourcePortraitId: string;
+}
+
+export interface CreateProductGenerationRequest {
+  styleId: string;
+  /** Client-supplied idempotency key — replaying the same (session, operationId) never creates a second generation or a second provider call. */
+  operationId: string;
+}
