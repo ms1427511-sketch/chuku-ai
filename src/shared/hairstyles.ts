@@ -138,4 +138,4 @@ export function listEnabledHairstyles(): HairstyleCatalogEntry[] {
 // Stage A benchmark deliberately uses only 5 of the 15 catalog entries
 // (spec section 12) — not a separate list, so the benchmark never drifts
 // out of sync with the real catalog's ids/prompts.
-export const STAGE_A_HAIRSTYLE_IDS = ["buzz-cut", "skin-fade", "textured-crop", "pompadour", "curly-top"] as const;
+export const STAGE_A_HAIRSTYLE_IDS = ["buzz-cut", "skin-fade", "textured-crop", "pompadour", "curly-fade"] as const;

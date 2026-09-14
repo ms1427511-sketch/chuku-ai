@@ -10,7 +10,7 @@ substitute for human review of the resulting contact sheet.
   `portrait-b.png`, `portrait-c.png` — synthetic test portraits only. Never
   real MEKKY customer photos, never downloaded photos of real people.
 - **5 hairstyles** (`STAGE_A_HAIRSTYLE_IDS` in `src/shared/hairstyles.ts`):
-  Buzz Cut, Skin Fade, Textured Crop, Pompadour, Curly Top.
+  Buzz Cut, Skin Fade, Textured Crop, Pompadour, Curly Fade.
 - **Maximum 15 provider generations** (3 × 5). Enforced independently by
   the server-side cost guard (`src/server/services/cost-guard.ts`), not
   only by this script's loop bounds.
