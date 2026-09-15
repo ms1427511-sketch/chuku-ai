@@ -8,6 +8,8 @@ export interface SessionRow {
   id: string;
   source_portrait_id: string | null;
   external_owner_id: string | null;
+  /** Opaque, MEKKY-supplied session id — Phase 4.1B internal integration only. Carries no authorization weight; see security/internal-auth.ts. */
+  external_session_id: string | null;
   favorite_generation_id: string | null;
   status: string;
   created_at: string;
@@ -24,7 +26,12 @@ export interface GenerationRow {
   provider_job_id: string | null;
   generation_index: number;
   status: string;
-  source_portrait_id: string;
+  /** Null for internal (MEKKY) generations, which have no fixed Lab portrait id. */
+  source_portrait_id: string | null;
+  /** Opaque, MEKKY-supplied durable dispatch id — Phase 4.1B internal integration only. Globally unique when set. */
+  external_generation_id: string | null;
+  /** Hash of the material request (style + source identity) tied to external_generation_id — see services/internal-generation-service.ts. */
+  request_fingerprint: string | null;
   result_path: string | null;
   retry_of: string | null;
   retry_count: number;

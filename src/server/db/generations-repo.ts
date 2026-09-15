@@ -8,6 +8,13 @@ export function findByOperationId(sessionId: string, operationId: string): Gener
     .get(sessionId, operationId) as GenerationRow | undefined;
 }
 
+/** Phase 4.1B internal integration only — the durable cross-service dispatch identity (mission section 6). Globally unique when set. */
+export function findByExternalGenerationId(externalGenerationId: string): GenerationRow | undefined {
+  return getDb()
+    .prepare(`SELECT * FROM generations WHERE external_generation_id = ?`)
+    .get(externalGenerationId) as GenerationRow | undefined;
+}
+
 export function countBySession(sessionId: string): number {
   const row = getDb().prepare(`SELECT COUNT(*) as count FROM generations WHERE session_id = ?`).get(sessionId) as { count: number };
   return row.count;
@@ -41,9 +48,9 @@ export function insertGenerationIfWithinLimit(row: GenerationRow, maxPerSession:
   db.prepare(
     `INSERT INTO generations
       (id, session_id, operation_id, style_id, provider, provider_job_id, generation_index, status,
-       source_portrait_id, result_path, retry_of, retry_count, safe_error_code, failure_message,
-       created_at, started_at, completed_at, latency_ms, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       source_portrait_id, external_generation_id, request_fingerprint, result_path, retry_of, retry_count,
+       safe_error_code, failure_message, created_at, started_at, completed_at, latency_ms, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     row.id,
     row.session_id,
@@ -54,6 +61,8 @@ export function insertGenerationIfWithinLimit(row: GenerationRow, maxPerSession:
     row.generation_index,
     row.status,
     row.source_portrait_id,
+    row.external_generation_id,
+    row.request_fingerprint,
     row.result_path,
     row.retry_of,
     row.retry_count,

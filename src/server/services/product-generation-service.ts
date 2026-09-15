@@ -90,6 +90,8 @@ export async function createProductGeneration(sessionId: string, styleId: string
     generation_index: generationIndex,
     status: "queued",
     source_portrait_id: session.source_portrait_id,
+    external_generation_id: null,
+    request_fingerprint: null,
     result_path: null,
     retry_of: null,
     retry_count: 0,

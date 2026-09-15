@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   source_portrait_id TEXT,
   external_owner_id TEXT,
+  external_session_id TEXT,
   favorite_generation_id TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   created_at TEXT NOT NULL,
@@ -22,7 +23,9 @@ CREATE TABLE IF NOT EXISTS generations (
   provider_job_id TEXT,
   generation_index INTEGER NOT NULL,
   status TEXT NOT NULL,
-  source_portrait_id TEXT NOT NULL,
+  source_portrait_id TEXT,
+  external_generation_id TEXT,
+  request_fingerprint TEXT,
   result_path TEXT,
   retry_of TEXT,
   retry_count INTEGER NOT NULL DEFAULT 0,
@@ -39,4 +42,10 @@ CREATE TABLE IF NOT EXISTS generations (
 CREATE INDEX IF NOT EXISTS idx_generations_session ON generations(session_id);
 CREATE INDEX IF NOT EXISTS idx_generations_status ON generations(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_status_expires ON sessions(status, expires_at);
+-- Both nullable columns: SQLite UNIQUE indexes permit any number of NULL
+-- rows, so Lab-only sessions/generations (which never set an external id)
+-- never collide with each other or with the internal (MEKKY) integration
+-- path's real external ids.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_external_session_id ON sessions(external_session_id) WHERE external_session_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_generations_external_generation_id ON generations(external_generation_id) WHERE external_generation_id IS NOT NULL;
 `;

@@ -17,6 +17,11 @@ export const CONTACT_SHEETS_DIR = path.join(PROJECT_ROOT, "test-images", "contac
 export const PRODUCT_DATA_DIR = path.join(PROJECT_ROOT, "data");
 export const PRODUCT_RESULTS_DIR = path.join(PROJECT_ROOT, "data", "results");
 export const PRODUCT_DB_PATH = path.join(PROJECT_ROOT, "data", "chuku.db");
+// Phase 4.1B internal integration only: short-lived local copies of a
+// MEKKY-issued signed source download, deleted once no longer needed — see
+// security/source-fetch.ts. Never a Lab/benchmark root, never provider input
+// path reused across requests.
+export const PRODUCT_TMP_DIR = path.join(PROJECT_ROOT, "data", "tmp");
 
 /**
  * Resolves `relativePath` against `baseDir` and throws unless the result is
@@ -58,6 +63,16 @@ export function resolveResultDir(source: string, hairstyleId: string): string {
  */
 export function resolveProductResultDir(sessionId: string): string {
   return resolveWithinDir(PRODUCT_RESULTS_DIR, sessionId);
+}
+
+/**
+ * A safe temp filename/path for one internal source download: always a
+ * server-generated token (never derived from caller input), and always
+ * resolved through resolveWithinDir — same structural-defense pattern as
+ * resolveProductResultDir.
+ */
+export function resolveProductTmpFile(tmpToken: string): string {
+  return resolveWithinDir(PRODUCT_TMP_DIR, tmpToken);
 }
 
 /**

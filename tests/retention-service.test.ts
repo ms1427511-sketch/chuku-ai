@@ -14,6 +14,7 @@ function makeSession(overrides: Partial<SessionRow> = {}): SessionRow {
   return {
     id: "session-1",
     source_portrait_id: "portrait-a",
+    external_session_id: null,
     external_owner_id: null,
     favorite_generation_id: null,
     status: "active",
@@ -36,6 +37,8 @@ function makeCompletedGeneration(overrides: Partial<GenerationRow> = {}): Genera
     generation_index: 1,
     status: "completed",
     source_portrait_id: "portrait-a",
+    external_generation_id: null,
+    request_fingerprint: null,
     result_path: null,
     retry_of: null,
     retry_count: 0,

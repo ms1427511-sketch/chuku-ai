@@ -8,6 +8,7 @@ import { sessionsRouter } from "./routes/sessions.ts";
 import { productGenerationsRouter } from "./routes/product-generations.ts";
 import { productResultsRouter } from "./routes/product-results.ts";
 import { maintenanceRouter } from "./routes/maintenance.ts";
+import { internalRouter } from "./routes/internal.ts";
 import { reconcileAllProcessingOnStartup } from "./services/product-generation-service.ts";
 
 const app = express();
@@ -20,6 +21,10 @@ app.use(sessionsRouter);
 app.use(productGenerationsRouter);
 app.use(productResultsRouter);
 app.use(maintenanceRouter);
+// Additive only — every route here requires internal auth
+// (security/internal-auth.ts) and is a distinct surface from the Lab routes
+// above. See docs/architecture.md and Phase 4.1B mission section 3.
+app.use(internalRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, lightxConfigured: Boolean(config.lightxApiKey) });
@@ -35,8 +40,10 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: "INTERNAL_ERROR", message });
 });
 
-// Bind strictly to 127.0.0.1 — never 0.0.0.0. This server proxies a
-// provider secret and must never be reachable from outside localhost.
+// Host is configurable via CHUKU_HOST but the safe default is always
+// 127.0.0.1 — this module never defaults to 0.0.0.0 itself (config/env.ts).
+// This server proxies a provider secret and must never be reachable from
+// outside localhost unless an operator explicitly opts in.
 app.listen(config.port, config.host, () => {
   console.log(`Chuku AI Lab server listening on http://${config.host}:${config.port}`);
   // Restart recovery: reconcile any generation left "processing" by a
