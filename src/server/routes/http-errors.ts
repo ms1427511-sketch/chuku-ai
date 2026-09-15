@@ -20,13 +20,19 @@ function errorStatus(code: string): number {
     case "INVALID_IMAGE_PATH":
     case "UNSUPPORTED_IMAGE_TYPE":
     case "INVALID_OPERATION":
-    case "GENERATION_IN_PROGRESS":
       return 400;
     case "RESULT_EXPIRED":
       return 410;
     case "MISSING_PROVIDER_CREDENTIAL":
     case "PROVIDER_TEMPORARY_FAILURE":
       return 503;
+    case "INTERNAL_AUTH_FAILED":
+      return 401;
+    case "EXTERNAL_GENERATION_CONFLICT":
+    case "GENERATION_IN_PROGRESS":
+      return 409;
+    case "SOURCE_FETCH_FAILED":
+      return 502;
     default:
       return 500;
   }

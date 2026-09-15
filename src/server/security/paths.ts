@@ -1,7 +1,8 @@
 import path from "node:path";
+import os from "node:os";
 import { existsSync } from "node:fs";
 import { realpath } from "node:fs/promises";
-import { PROJECT_ROOT } from "../config/env.ts";
+import { PROJECT_ROOT, config } from "../config/env.ts";
 import { InvalidImagePathError } from "../../shared/errors.ts";
 
 // Benchmark/Lab-only storage roots — Stage A/B evidence. Never touched by
@@ -13,10 +14,25 @@ export const TEST_IMAGES_RESULTS_DIR = path.join(PROJECT_ROOT, "test-images", "r
 export const CONTACT_SHEETS_DIR = path.join(PROJECT_ROOT, "test-images", "contact-sheets");
 
 // Product (session/generation) storage roots — real, owned, deletable
-// runtime data, distinct from the benchmark roots above.
-export const PRODUCT_DATA_DIR = path.join(PROJECT_ROOT, "data");
-export const PRODUCT_RESULTS_DIR = path.join(PROJECT_ROOT, "data", "results");
-export const PRODUCT_DB_PATH = path.join(PROJECT_ROOT, "data", "chuku.db");
+// runtime data, distinct from the benchmark roots above. PRODUCT_DATA_DIR
+// defaults to PROJECT_ROOT/data (identical to pre-4.1B-hardening behavior
+// when CHUKU_PRODUCT_DATA_DIR is unset) but is configurable so a deployed
+// service can point it at a mounted persistent volume (e.g. "/data" on
+// Railway) — deployment-hardening mission section 4. This is the only root
+// that must survive a restart: SQLite DB + finalized result files.
+export const PRODUCT_DATA_DIR = config.productDataDirOverride ? path.resolve(config.productDataDirOverride) : path.join(PROJECT_ROOT, "data");
+export const PRODUCT_RESULTS_DIR = path.join(PRODUCT_DATA_DIR, "results");
+export const PRODUCT_DB_PATH = path.join(PRODUCT_DATA_DIR, "chuku.db");
+// Phase 4.1B internal integration only: short-lived local copies of a
+// MEKKY-issued signed source download, deleted once no longer needed (see
+// security/source-fetch.ts's deleteTempSource, always called in a `finally`
+// block by the caller) — never a Lab/benchmark root, never provider input
+// path reused across requests. Deliberately NOT nested under
+// PRODUCT_DATA_DIR: nothing here needs to survive a restart, so it lives on
+// the container's own ephemeral local disk rather than the persistent
+// volume — deployment-hardening mission section 4 ("prefer ephemeral/temp
+// storage for disposable sources").
+export const PRODUCT_TMP_DIR = path.join(os.tmpdir(), "chuku-product-tmp");
 
 /**
  * Resolves `relativePath` against `baseDir` and throws unless the result is
@@ -58,6 +74,16 @@ export function resolveResultDir(source: string, hairstyleId: string): string {
  */
 export function resolveProductResultDir(sessionId: string): string {
   return resolveWithinDir(PRODUCT_RESULTS_DIR, sessionId);
+}
+
+/**
+ * A safe temp filename/path for one internal source download: always a
+ * server-generated token (never derived from caller input), and always
+ * resolved through resolveWithinDir — same structural-defense pattern as
+ * resolveProductResultDir.
+ */
+export function resolveProductTmpFile(tmpToken: string): string {
+  return resolveWithinDir(PRODUCT_TMP_DIR, tmpToken);
 }
 
 /**

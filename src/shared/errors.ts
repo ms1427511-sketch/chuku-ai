@@ -98,3 +98,31 @@ export class InvalidOperationError extends ChukuError {
     super(reason, "INVALID_OPERATION");
   }
 }
+
+// ---------------------------------------------------------------------------
+// Internal (MEKKY <-> Chuku) integration errors — Phase 4.1B. See
+// docs/architecture.md and server/routes/internal.ts. Never expose provider
+// details through these; see safe-error-code mapping in
+// services/internal-safe-error-mapping.ts.
+
+export class InternalAuthError extends ChukuError {
+  constructor(reason: string) {
+    super(`internal auth failed: ${reason}`, "INTERNAL_AUTH_FAILED");
+  }
+}
+
+/** Same externalGenerationId reused for a materially different request — see docs on request_fingerprint. */
+export class ExternalGenerationConflictError extends ChukuError {
+  constructor(externalGenerationId: string) {
+    super(
+      `externalGenerationId ${externalGenerationId} was already used for a different request`,
+      "EXTERNAL_GENERATION_CONFLICT",
+    );
+  }
+}
+
+export class SourceFetchError extends ChukuError {
+  constructor(reason: string) {
+    super(`source fetch failed: ${reason}`, "SOURCE_FETCH_FAILED");
+  }
+}

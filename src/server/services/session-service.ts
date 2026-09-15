@@ -33,6 +33,7 @@ export function createSession(): ChukuSession {
     id: randomUUID(),
     source_portrait_id: null,
     external_owner_id: null,
+    external_session_id: null,
     favorite_generation_id: null,
     status: "active",
     created_at: now,
