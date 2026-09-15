@@ -13,7 +13,8 @@ import {
 import { resolveInputPortrait, resolveProductResultDir } from "../security/paths.ts";
 import { sanitizeErrorMessage } from "../security/sanitize.ts";
 import { config } from "../config/env.ts";
-import { LightXHairstyleProvider, ProviderCallError } from "../providers/lightx-provider.ts";
+import { ProviderCallError } from "../providers/lightx-provider.ts";
+import { getProvider } from "../providers/provider-factory.ts";
 import { mapFailureCategoryToSafeErrorCode } from "./safe-error-mapping.ts";
 import { PORTRAIT_FILENAMES } from "./generation-service.ts";
 import * as sessionsRepo from "../db/sessions-repo.ts";
@@ -27,8 +28,14 @@ import type { GenerationRow } from "../db/types.ts";
 // so a genuinely still-in-flight job is never prematurely killed.
 const STALE_PROCESSING_THRESHOLD_MS = 5 * 60_000;
 
-function provider(): LightXHairstyleProvider {
-  return new LightXHairstyleProvider(config.lightxApiKey);
+// The fake provider (providers/fake-provider.ts) returns a `data:image/...`
+// resultUrl rather than a remote URL with a file extension in its path —
+// recognized here first, falling back to the existing substring check for
+// every real (LightX) resultUrl.
+function extensionFor(resultUrl: string): "png" | "jpg" {
+  if (resultUrl.startsWith("data:image/png")) return "png";
+  if (resultUrl.startsWith("data:image/jpeg") || resultUrl.startsWith("data:image/jpg")) return "jpg";
+  return resultUrl.toLowerCase().includes(".png") ? "png" : "jpg";
 }
 
 async function downloadProductResult(resultUrl: string, sessionId: string, generationId: string): Promise<string> {
@@ -36,7 +43,7 @@ async function downloadProductResult(resultUrl: string, sessionId: string, gener
   await mkdir(dir, { recursive: true });
   const response = await fetch(resultUrl);
   if (!response.ok) throw new Error(`failed to download result image: HTTP ${response.status}`);
-  const ext = resultUrl.toLowerCase().includes(".png") ? "png" : "jpg";
+  const ext = extensionFor(resultUrl);
   const fileName = `${generationId}.${ext}`;
   await writeFile(path.join(dir, fileName), new Uint8Array(await response.arrayBuffer()));
   // Relative to PRODUCT_RESULTS_DIR — never an absolute filesystem path.
@@ -85,7 +92,7 @@ export async function createProductGeneration(sessionId: string, styleId: string
     session_id: sessionId,
     operation_id: operationId,
     style_id: styleId,
-    provider: "lightx",
+    provider: config.providerMode,
     provider_job_id: null,
     generation_index: generationIndex,
     status: "queued",
@@ -117,7 +124,7 @@ export async function createProductGeneration(sessionId: string, styleId: string
   if (!fileName) throw new InvalidOperationError(`session ${sessionId} has an unrecognized source portrait id`);
 
   try {
-    const job = await provider().createGeneration({
+    const job = await getProvider().createGeneration({
       sourceImagePath: resolveInputPortrait(fileName),
       prompt: hairstyle.prompt,
     });
@@ -155,7 +162,7 @@ export async function finalizeGeneration(id: string): Promise<ProductGeneration>
 
   const startedAt = row.started_at ?? row.created_at;
   try {
-    const status = await provider().pollUntilTerminal(row.provider_job_id);
+    const status = await getProvider().pollUntilTerminal(row.provider_job_id);
     const completedAt = new Date().toISOString();
     const latencyMs = Date.parse(completedAt) - Date.parse(startedAt);
 
@@ -225,7 +232,7 @@ export async function reconcileIfProcessing(row: GenerationRow): Promise<Generat
   const age = Date.now() - startedAt;
 
   try {
-    const status = await provider().getGeneration(row.provider_job_id);
+    const status = await getProvider().getGeneration(row.provider_job_id);
     if (status.status === "completed" && status.resultUrl) {
       const resultPath = await downloadProductResult(status.resultUrl, row.session_id, row.id);
       return generationsRepo.updateGeneration(row.id, {

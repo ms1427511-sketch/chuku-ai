@@ -48,6 +48,38 @@ function csv(envValue: string | undefined): string[] {
     .filter(Boolean);
 }
 
+// Deployment-hardening mission section 1: explicit, fail-closed-at-boot
+// provider selection. Default is always "lightx" — production/default
+// behavior must never silently run the fake provider. "fake" requires
+// explicit opt-in and is meant only for a deployed staging E2E with no
+// LightX credential installed (providers/fake-provider.ts).
+function resolveProviderMode(envValue: string | undefined): "lightx" | "fake" {
+  const trimmed = envValue?.trim();
+  if (!trimmed) return "lightx";
+  if (trimmed === "lightx" || trimmed === "fake") return trimmed;
+  throw new Error(`invalid CHUKU_PROVIDER_MODE: "${trimmed}" (expected "lightx" or "fake")`);
+}
+
+// Deployment-hardening mission section 3: explicit route-surface gating.
+// Default "local" preserves the existing standalone Lab behavior exactly —
+// "service" (the Railway/deployed shape) mounts only /health + /internal/*
+// (see index.ts).
+function resolveDeploymentMode(envValue: string | undefined): "local" | "service" {
+  const trimmed = envValue?.trim();
+  if (!trimmed) return "local";
+  if (trimmed === "local" || trimmed === "service") return trimmed;
+  throw new Error(`invalid CHUKU_DEPLOYMENT_MODE: "${trimmed}" (expected "local" or "service")`);
+}
+
+// Deployment-hardening mission section 4: absent by default (existing local
+// behavior, PROJECT_ROOT/data, is unchanged), settable to an absolute mount
+// path (e.g. "/data" on Railway) for the persistent volume — see
+// security/paths.ts.
+function resolveProductDataDirOverride(envValue: string | undefined): string | null {
+  const trimmed = envValue?.trim();
+  return trimmed || null;
+}
+
 export const config = {
   port: Number(process.env.CHUKU_PORT ?? 4317),
   host: resolveHost(process.env.CHUKU_HOST),
@@ -78,6 +110,11 @@ export const config = {
   internalSourceAllowedHosts: csv(process.env.CHUKU_INTERNAL_SOURCE_ALLOWED_HOSTS),
   internalSourceFetchTimeoutMs: positiveInt(process.env.CHUKU_INTERNAL_SOURCE_FETCH_TIMEOUT_MS, 10_000),
   internalSourceMaxBytes: positiveInt(process.env.CHUKU_INTERNAL_SOURCE_MAX_BYTES, 8 * 1024 * 1024),
+
+  // --- Deployment hardening (Railway staging prep) ---------------------
+  providerMode: resolveProviderMode(process.env.CHUKU_PROVIDER_MODE),
+  deploymentMode: resolveDeploymentMode(process.env.CHUKU_DEPLOYMENT_MODE),
+  productDataDirOverride: resolveProductDataDirOverride(process.env.CHUKU_PRODUCT_DATA_DIR),
 };
 
 export function hasLightXCredential(): boolean {

@@ -21,7 +21,15 @@ import { handleError } from "./http-errors.ts";
 
 export const internalRouter = Router();
 
-internalRouter.use(internalAuthMiddleware);
+// Scoped to "/internal" (every route below lives under this prefix): a
+// bare `.use(internalAuthMiddleware)` would match every path this router
+// ever sees once mounted, including unrelated ones like "/health" — since
+// it never calls next() on rejection, that would swallow those requests
+// with a 401 instead of letting them fall through to their real handler
+// (or, correctly, a 404). Deployment-hardening mission section 3/8: route
+// absence in service mode must be genuine ("not mounted"), not an
+// incidental side effect of this middleware's scope.
+internalRouter.use("/internal", internalAuthMiddleware);
 
 const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",

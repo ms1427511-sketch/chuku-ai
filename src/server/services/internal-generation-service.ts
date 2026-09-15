@@ -25,15 +25,12 @@ import { findHairstyle } from "../../shared/hairstyles.ts";
 import { config } from "../config/env.ts";
 import { sanitizeErrorMessage } from "../security/sanitize.ts";
 import { deleteTempSource, fetchSource } from "../security/source-fetch.ts";
-import { LightXHairstyleProvider, ProviderCallError } from "../providers/lightx-provider.ts";
+import { ProviderCallError } from "../providers/lightx-provider.ts";
+import { getProvider } from "../providers/provider-factory.ts";
 import { mapFailureCategoryToInternalSafeErrorCode, normalizeSafeErrorCodeForInternal } from "./internal-safe-error-mapping.ts";
 import { reconcileIfProcessing } from "./product-generation-service.ts";
 import * as sessionsRepo from "../db/sessions-repo.ts";
 import * as generationsRepo from "../db/generations-repo.ts";
-
-function provider(): LightXHairstyleProvider {
-  return new LightXHairstyleProvider(config.lightxApiKey);
-}
 
 function assertValidRequest(req: InternalCreateGenerationRequest): void {
   if (!req.externalOwnerId || !req.externalSessionId || !req.externalGenerationId || !req.operationId) {
@@ -110,7 +107,7 @@ async function dispatchToProvider(row: GenerationRow, req: InternalCreateGenerat
     tempPath = fetched.tempPath;
     // req.style.key was already validated against the catalog by the caller.
     const hairstyle = findHairstyle(req.style.key)!;
-    const job = await provider().createGeneration({ sourceImagePath: tempPath, prompt: hairstyle.prompt });
+    const job = await getProvider().createGeneration({ sourceImagePath: tempPath, prompt: hairstyle.prompt });
     const updated = generationsRepo.updateGeneration(row.id, {
       status: "processing",
       provider_job_id: job.externalJobId,
@@ -166,7 +163,7 @@ export async function createInternalGeneration(req: InternalCreateGenerationRequ
     session_id: session.id,
     operation_id: req.operationId,
     style_id: req.style.key,
-    provider: "lightx",
+    provider: config.providerMode,
     provider_job_id: null,
     generation_index: generationsRepo.nextGenerationIndex(session.id, req.style.key),
     status: "queued",

@@ -7,18 +7,23 @@ export interface CreateGenerationInput {
   prompt: string;
 }
 
+// "fake" is the deterministic, network-free provider (providers/fake-provider.ts,
+// selected only via CHUKU_PROVIDER_MODE=fake — see config/env.ts). Never
+// inferred, never a silent fallback from "lightx".
+export type ProviderName = "lightx" | "fake";
+
 export interface GenerationJob {
-  provider: "lightx";
+  provider: ProviderName;
   externalJobId: string;
   status: "queued" | "processing";
   createdAt: string;
 }
 
 export interface GenerationStatus {
-  provider: "lightx";
+  provider: ProviderName;
   externalJobId: string;
   status: "processing" | "completed" | "failed";
-  /** Set only when status is "completed". A remote URL — the caller downloads it, never persists the URL itself as storage. */
+  /** Set only when status is "completed". A remote or data: URL — the caller downloads/decodes it, never persists the URL itself as storage. */
   resultUrl: string | null;
   failureCategory: GenerationFailureCategory | null;
   failureMessage: string | null;
@@ -33,4 +38,6 @@ export interface GenerationStatus {
 export interface HairstyleProvider {
   createGeneration(input: CreateGenerationInput): Promise<GenerationJob>;
   getGeneration(jobId: string): Promise<GenerationStatus>;
+  /** Bounded poll loop to a terminal status. Never indefinite. */
+  pollUntilTerminal(jobId: string): Promise<GenerationStatus>;
 }
