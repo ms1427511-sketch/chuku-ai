@@ -49,16 +49,37 @@ export type InternalSafeErrorCode =
   | "CHUKU_GENERATION_FAILED"
   | "CHUKU_GENERATION_TIMEOUT"
   | "CHUKU_SOURCE_UNAVAILABLE"
-  | "CHUKU_RESULT_INVALID";
+  | "CHUKU_RESULT_INVALID"
+  | "CHUKU_QUOTA_EXCEEDED"
+  | "CHUKU_CANCELLED";
+
+/**
+ * Provider-charge state for one generation (Phase 4.1C), so MEKKY's ledger
+ * can settle its reservation. Credits only -- never a price, provider
+ * order id or provider account detail. "unknown" means the charge cannot be
+ * determined and must be treated as possibly charged, never as free.
+ */
+export interface InternalBilling {
+  state: "pending" | "charged" | "not_charged" | "unknown";
+  credits: number | null;
+}
 
 /**
  * Normalized-only response shape. Must never include a LightX job id,
  * provider name, raw provider status, provider URL, provider prompt/debug
- * payload, provider error body, API key, or cost information.
+ * payload, provider error body, API key, or money amounts (billing carries
+ * a credit count only).
  */
 export interface InternalGenerationResponse {
   externalGenerationId: string;
   status: InternalGenerationStatus;
   safeErrorCode: InternalSafeErrorCode | null;
   resultAvailable: boolean;
+  billing: InternalBilling;
+}
+
+/** DELETE /internal/sessions/:externalSessionId/artifacts. Provider-side copies cannot be deleted through the LightX API. */
+export interface InternalSessionPurgeResponse {
+  deletedResults: number;
+  providerCopyDeletion: "unsupported";
 }

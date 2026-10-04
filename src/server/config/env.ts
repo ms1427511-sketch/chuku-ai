@@ -31,6 +31,11 @@ function positiveInt(envValue: string | undefined, fallback: number): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function positiveNumber(envValue: string | undefined, fallback: number): number {
+  const parsed = Number(envValue);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 // Safe default preserved unconditionally: an explicit env override can widen
 // the bind host, but this module itself never *defaults* to 0.0.0.0 — see
 // Phase 4.1B mission section 5.
@@ -115,6 +120,23 @@ export const config = {
   providerMode: resolveProviderMode(process.env.CHUKU_PROVIDER_MODE),
   deploymentMode: resolveDeploymentMode(process.env.CHUKU_DEPLOYMENT_MODE),
   productDataDirOverride: resolveProductDataDirOverride(process.env.CHUKU_PRODUCT_DATA_DIR),
+
+  // --- Cost controls (Phase 4.1C) ---------------------------------------
+  // Kill switch for new provider calls on the internal path. Fails closed:
+  // only the exact value "true" enables generation; unset, empty or any
+  // other value refuses (CHUKU_AI_UNAVAILABLE, not charged). Replays of
+  // already-recorded generations are unaffected.
+  generationEnabled: process.env.CHUKU_GENERATION_ENABLED?.trim() === "true",
+  // Credits recorded per completed generation. Configurable, never
+  // hardcoded in the ledger -- the benchmark observed 1 credit/generation,
+  // but LightX does not publish a per-call figure for the hairstyle API.
+  creditsPerGeneration: positiveNumber(process.env.CHUKU_CREDITS_PER_GENERATION, 1),
+  // Service-side breakers, independent of (and in addition to) MEKKY's own
+  // admission limits -- a second line if the backend is misconfigured.
+  ownerDailyLimit: positiveInt(process.env.CHUKU_OWNER_DAILY_LIMIT, 10),
+  ownerMonthlyLimit: positiveInt(process.env.CHUKU_OWNER_MONTHLY_LIMIT, 40),
+  globalDailyLimit: positiveInt(process.env.CHUKU_GLOBAL_DAILY_LIMIT, 100),
+  globalMonthlyLimit: positiveInt(process.env.CHUKU_GLOBAL_MONTHLY_LIMIT, 1000),
 };
 
 export function hasLightXCredential(): boolean {

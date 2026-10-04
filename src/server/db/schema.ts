@@ -39,6 +39,22 @@ CREATE TABLE IF NOT EXISTS generations (
   UNIQUE (session_id, operation_id)
 );
 
+-- Phase 4.1C provider-charge record for internal (MEKKY) generations.
+-- Written before any provider call and never deleted by session purge, so
+-- the cost of a generation stays known after its artifacts are gone.
+-- reserved -> submitting -> submitted -> charged | not_charged | unknown.
+CREATE TABLE IF NOT EXISTS provider_charges (
+  generation_id TEXT PRIMARY KEY REFERENCES generations(id),
+  owner_id TEXT NOT NULL,
+  state TEXT NOT NULL CHECK (state IN ('reserved','submitting','submitted','charged','not_charged','unknown')),
+  credits REAL NOT NULL,
+  reason TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_provider_charges_created ON provider_charges(created_at);
+CREATE INDEX IF NOT EXISTS idx_provider_charges_owner_created ON provider_charges(owner_id, created_at);
+
 CREATE INDEX IF NOT EXISTS idx_generations_session ON generations(session_id);
 CREATE INDEX IF NOT EXISTS idx_generations_status ON generations(status);
 CREATE INDEX IF NOT EXISTS idx_sessions_status_expires ON sessions(status, expires_at);

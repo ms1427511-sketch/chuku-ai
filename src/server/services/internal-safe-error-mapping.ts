@@ -31,6 +31,8 @@ const INTERNAL_SAFE_ERROR_CODES: ReadonlySet<string> = new Set<InternalSafeError
   "CHUKU_GENERATION_TIMEOUT",
   "CHUKU_SOURCE_UNAVAILABLE",
   "CHUKU_RESULT_INVALID",
+  "CHUKU_QUOTA_EXCEEDED",
+  "CHUKU_CANCELLED",
 ]);
 
 // Lab-facing safe-error codes (services/safe-error-mapping.ts) that can end

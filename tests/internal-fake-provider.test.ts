@@ -17,6 +17,9 @@ const SECRET = "internal-auth-fake-provider-test-secret-0123456789";
 process.env.CHUKU_INTERNAL_AUTH_SECRET = SECRET;
 process.env.CHUKU_INTERNAL_SOURCE_ALLOWED_HOSTS = "allowed.supabase.co";
 process.env.CHUKU_MAX_GENERATIONS_PER_SESSION = "5";
+// Phase 4.1C: generation is off unless explicitly enabled; this suite
+// exercises the enabled path (the kill switch has its own suite).
+process.env.CHUKU_GENERATION_ENABLED = "true";
 process.env.CHUKU_PROVIDER_MODE = "fake";
 delete process.env.LIGHTX_API_KEY;
 // An isolated CHUKU_PRODUCT_DATA_DIR (mission section 4/9): without this,

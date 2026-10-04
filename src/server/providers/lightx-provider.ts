@@ -57,7 +57,7 @@ export class LightXHairstyleProvider implements HairstyleProvider {
     return { "content-type": "application/json", "x-api-key": this.apiKey };
   }
 
-  private async request<T>(url: string, body: unknown): Promise<LightXEnvelope<T>> {
+  private async request<T>(url: string, body: unknown, stage: ProviderCallStage = "before_submit"): Promise<LightXEnvelope<T>> {
     // Resolved outside the try block so a missing-credential failure
     // (MissingProviderCredentialError) propagates as itself — fails
     // closed with a distinct, identifiable error — rather than being
@@ -68,14 +68,18 @@ export class LightXHairstyleProvider implements HairstyleProvider {
       response = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
     } catch (error) {
       const message = error instanceof Error ? error.message : "network error";
-      throw new ProviderCallError("network_error", sanitizeErrorMessage(message, this.apiKey));
+      throw new ProviderCallError("network_error", sanitizeErrorMessage(message, this.apiKey), { stage });
     }
     const json = (await response.json().catch(() => null)) as LightXEnvelope<T> | { statusCode?: number } | null;
     if (!response.ok || !json || (json as LightXEnvelope<T>).statusCode >= 4000) {
       const code = (json as { statusCode?: number } | null)?.statusCode;
       const category = categorizeHttpError(response.status, code);
       const rawMessage = (json as { message?: string } | null)?.message ?? `HTTP ${response.status}`;
-      throw new ProviderCallError(category, sanitizeErrorMessage(rawMessage, this.apiKey));
+      throw new ProviderCallError(category, sanitizeErrorMessage(rawMessage, this.apiKey), {
+        stage,
+        httpStatus: response.status,
+        providerCode: code,
+      });
     }
     return json as LightXEnvelope<T>;
   }
@@ -108,10 +112,14 @@ export class LightXHairstyleProvider implements HairstyleProvider {
       throw new ProviderCallError("provider_error", `LightX S3 upload failed with HTTP ${putResponse.status}`);
     }
 
-    const jobEnvelope = await this.request<{ orderId: string; status: string }>(`${BASE_URL}/hairstyle`, {
-      imageUrl: uploadEnvelope.body.imageUrl,
-      textPrompt: input.prompt,
-    });
+    // The only paid call. Everything before it (upload URL, S3 PUT) is
+    // free, so its stage tells the ledger whether a failure can have cost
+    // anything.
+    const jobEnvelope = await this.request<{ orderId: string; status: string }>(
+      `${BASE_URL}/hairstyle`,
+      { imageUrl: uploadEnvelope.body.imageUrl, textPrompt: input.prompt },
+      "submit",
+    );
 
     return {
       provider: "lightx",
@@ -167,12 +175,25 @@ export class LightXHairstyleProvider implements HairstyleProvider {
   }
 }
 
+/** "submit" = the paid /hairstyle call; anything earlier cannot have been charged. */
+export type ProviderCallStage = "before_submit" | "submit";
+
 export class ProviderCallError extends Error {
   readonly category: GenerationFailureCategory;
+  readonly stage: ProviderCallStage;
+  readonly httpStatus: number | null;
+  readonly providerCode: number | null;
 
-  constructor(category: GenerationFailureCategory, message: string) {
+  constructor(
+    category: GenerationFailureCategory,
+    message: string,
+    details: { stage?: ProviderCallStage; httpStatus?: number; providerCode?: number } = {},
+  ) {
     super(message);
     this.name = "ProviderCallError";
     this.category = category;
+    this.stage = details.stage ?? "before_submit";
+    this.httpStatus = details.httpStatus ?? null;
+    this.providerCode = details.providerCode ?? null;
   }
 }

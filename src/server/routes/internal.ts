@@ -16,6 +16,7 @@ import {
   createInternalGeneration,
   getInternalGenerationResultRow,
   getInternalGenerationStatus,
+  purgeInternalSessionArtifacts,
 } from "../services/internal-generation-service.ts";
 import { handleError } from "./http-errors.ts";
 
@@ -83,5 +84,16 @@ internalRouter.get("/internal/generations/:externalGenerationId/result", (req, r
       return;
     }
     res.status(500).json({ error: "INTERNAL_ERROR" });
+  }
+});
+
+// Phase 4.1C session purge, called by MEKKY's dispatcher when a session is
+// ended or expires. Idempotent -- safe to retry until MEKKY records the
+// purge as done.
+internalRouter.delete("/internal/sessions/:externalSessionId/artifacts", async (req, res) => {
+  try {
+    res.json(await purgeInternalSessionArtifacts(req.params.externalSessionId));
+  } catch (error) {
+    handleError(res, error);
   }
 });

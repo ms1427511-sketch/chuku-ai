@@ -3,7 +3,9 @@ import http, { type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import express from "express";
 import sharp from "sharp";
-import { rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 // Must be set before config/env.ts is first imported anywhere in this
 // module graph (module-load-time config — same convention used throughout
@@ -12,6 +14,14 @@ const SECRET = "internal-auth-test-secret-0123456789abcdef";
 process.env.CHUKU_INTERNAL_AUTH_SECRET = SECRET;
 process.env.CHUKU_INTERNAL_SOURCE_ALLOWED_HOSTS = "allowed.supabase.co";
 process.env.CHUKU_MAX_GENERATIONS_PER_SESSION = "5";
+// Phase 4.1C: generation is off unless explicitly enabled; this suite
+// exercises the enabled path (the kill switch has its own suite).
+process.env.CHUKU_GENERATION_ENABLED = "true";
+// Own data and temp roots: afterEach below rm -rf's the results and temp
+// dirs, which would race other files using the shared defaults in parallel
+// (same reason as tests/internal-fake-provider.test.ts).
+process.env.CHUKU_PRODUCT_DATA_DIR = await mkdtemp(path.join(tmpdir(), "chuku-internal-routes-test-"));
+process.env.TMPDIR = process.env.CHUKU_PRODUCT_DATA_DIR;
 
 let mockOutcome: "completed" | "still-processing" | "permanent-fail" = "completed";
 const createGenerationSpy = vi.fn();
@@ -329,7 +339,9 @@ describe("GET /internal/generations/:externalGenerationId", () => {
     expect(res.status).toBe(200);
     expect(res.json.status).toBe("completed");
     expect(res.json.resultAvailable).toBe(true);
-    expect(Object.keys(res.json).sort()).toEqual(["externalGenerationId", "resultAvailable", "safeErrorCode", "status"]);
+    expect(Object.keys(res.json).sort()).toEqual(["billing", "externalGenerationId", "resultAvailable", "safeErrorCode", "status"]);
+    // Phase 4.1C: a credit count only -- no price, order id or provider detail.
+    expect(res.json.billing).toEqual({ state: "charged", credits: 1 });
   });
 });
 
