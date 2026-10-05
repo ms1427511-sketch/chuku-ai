@@ -201,6 +201,19 @@ spend further LightX budget on a second matrix run.
   planned in-Lab — LightX's own `5047 INVALID_HUMAN_PORTRAIT` covers
   face-presence validation; quality beyond that is a human review
   responsibility.
+- **Single render source.** The mobile app collects three photos (front,
+  left side, right side); all three are stored privately per session and
+  validated by the backend, but LightX's v2 hairstyle endpoint takes exactly
+  one `imageUrl` + `textPrompt`, so the dispatcher hands this service only the
+  front photo and every look is rendered from it. Multi-photo rendering is
+  not supported and is not faked. The side photos are used only for the
+  app's on-device checks; no server-side analysis reads them.
+- **Preservation is requested, not guaranteed.** `PRESERVATION_CONSTRAINTS`
+  (`src/server/services/preservation-prompt.ts`) tells the provider to change
+  only the haircut/fade and keep identity, facial features, face shape, skin
+  tone, head proportions, beard/facial hair, hairline and existing density.
+  These are instructions, not guarantees; the app keeps its illustration and
+  hairline warnings next to every result.
 - LightX's hairstyle-endpoint credit cost is not published; per-generation
   dollar cost is `UNKNOWN` until observed from a real account dashboard
   (`docs/benchmark.md` → "Cost").

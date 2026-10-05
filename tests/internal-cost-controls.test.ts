@@ -231,6 +231,18 @@ describe("preservation prompt", () => {
     expect(prompt).toContain("beard");
   });
 
+  it("names skin tone, head proportions and facial features, and says only the haircut changes", () => {
+    const prompt = buildProviderPrompt("low fade, short textured top");
+    expect(prompt).toContain("Change only the haircut and fade");
+    expect(prompt).toContain("Keep the same skin tone");
+    expect(prompt).toContain("do not lighten, darken or retouch the skin");
+    expect(prompt).toContain("head proportions");
+    expect(prompt).toContain("all facial features");
+    expect(prompt).toContain("face shape");
+    expect(prompt).toContain("do not fill thinning, receding or sparse areas");
+    expect(prompt).not.toMatch(/guarantee|perfect/i);
+  });
+
   it("is what the provider receives on the internal path", async () => {
     await create();
     expect(createGenerationSpy).toHaveBeenCalledTimes(1);
