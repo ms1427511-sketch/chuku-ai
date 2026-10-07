@@ -112,6 +112,11 @@ Two independent limits exist, deliberately separate from each other:
   hard cap. A 6th generation attempt for a session returns
   `429 GENERATION_LIMIT_REACHED`, regardless of what the client UI does or
   fails to disable.
+- `CHUKU_MAX_INTERNAL_GENERATIONS_PER_SESSION` (default `6`) — the same hard
+  cap for MEKKY's `/internal/generations` path only: 3 discovery looks plus
+  the left, right and back final views of MEKKY's chosen-style flow. A 7th
+  returns `429 GENERATION_LIMIT_REACHED`. MEKKY enforces its own caps first;
+  this is the backstop. The Lab cap above does not change.
 
 Both are **safe pilot defaults, not billing rules** — see `.env.example`.
 

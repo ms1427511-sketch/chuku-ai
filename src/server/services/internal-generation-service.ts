@@ -12,6 +12,7 @@ import type { GenerationRow, SessionRow } from "../db/types.ts";
 import type {
   InternalBilling,
   InternalCreateGenerationRequest,
+  InternalGenerationShape,
   InternalGenerationResponse,
   InternalGenerationStatus,
   InternalSafeErrorCode,
@@ -34,7 +35,7 @@ import { ProviderCallError } from "../providers/lightx-provider.ts";
 import { getProvider } from "../providers/provider-factory.ts";
 import { mapFailureCategoryToInternalSafeErrorCode, normalizeSafeErrorCodeForInternal } from "./internal-safe-error-mapping.ts";
 import { reconcileIfProcessing } from "./product-generation-service.ts";
-import { buildProviderPrompt } from "./preservation-prompt.ts";
+import { buildFinalViewPrompt, buildProviderPrompt } from "./preservation-prompt.ts";
 import * as chargesRepo from "../db/charges-repo.ts";
 import * as sessionsRepo from "../db/sessions-repo.ts";
 import * as generationsRepo from "../db/generations-repo.ts";
@@ -44,10 +45,22 @@ function assertValidRequest(req: InternalCreateGenerationRequest): void {
     throw new InvalidOperationError("externalOwnerId, externalSessionId, externalGenerationId, and operationId are all required");
   }
   if (!req.style?.key) throw new InvalidOperationError("style.key is required");
+  if (req.generation !== undefined) {
+    const { kind, view } = (req.generation ?? {}) as Partial<InternalGenerationShape>;
+    const discovery = kind === "discovery" && view === "front";
+    const final = kind === "final" && (view === "left" || view === "right" || view === "back");
+    if (!discovery && !final) {
+      throw new InvalidOperationError("generation must be a discovery front look or a final left, right or back view");
+    }
+  }
   const source = req.source;
   if (!source?.signedUrl || !source.expectedMimeType || !source.maxBytes || !source.sourceObjectKey) {
     throw new InvalidOperationError("source.signedUrl, source.expectedMimeType, source.maxBytes, and source.sourceObjectKey are all required");
   }
+}
+
+function generationShape(req: InternalCreateGenerationRequest): InternalGenerationShape {
+  return req.generation ?? { kind: "discovery", view: "front" };
 }
 
 /**
@@ -55,14 +68,18 @@ function assertValidRequest(req: InternalCreateGenerationRequest): void {
  * excludes operationId (correlation/replay metadata, not material — mission
  * section 6) and signedUrl (expires/changes on every mint, so a retry with a
  * freshly re-signed URL for the same underlying object must still match).
+ * A final view adds its kind and view; a discovery look keeps the original
+ * material so fingerprints recorded before the chosen-style flow still match.
  */
 function computeFingerprint(req: InternalCreateGenerationRequest): string {
+  const shape = generationShape(req);
   const material = {
     externalOwnerId: req.externalOwnerId,
     externalSessionId: req.externalSessionId,
     styleKey: req.style.key,
     sourceObjectKey: req.source.sourceObjectKey,
     expectedMimeType: req.source.expectedMimeType,
+    ...(shape.kind === "final" ? { kind: shape.kind, view: shape.view } : {}),
   };
   return createHash("sha256").update(JSON.stringify(material)).digest("hex");
 }
@@ -179,9 +196,14 @@ async function dispatchToProvider(row: GenerationRow, req: InternalCreateGenerat
     const fetched = await fetchSource(req.source.signedUrl, req.source.expectedMimeType, req.source.maxBytes);
     tempPath = fetched.tempPath;
     // req.style.key was already validated against the catalog by the caller.
+    // For a final view it is the session's locked style, set by MEKKY.
     const hairstyle = findHairstyle(req.style.key)!;
+    const shape = generationShape(req);
+    const prompt = shape.kind === "final" && shape.view !== "front"
+      ? buildFinalViewPrompt(hairstyle.prompt, shape.view)
+      : buildProviderPrompt(hairstyle.prompt);
     chargesRepo.setChargeState(row.id, "submitting");
-    const job = await getProvider().createGeneration({ sourceImagePath: tempPath, prompt: buildProviderPrompt(hairstyle.prompt) });
+    const job = await getProvider().createGeneration({ sourceImagePath: tempPath, prompt });
     const updated = generationsRepo.updateGeneration(row.id, {
       status: "processing",
       provider_job_id: job.externalJobId,
@@ -266,7 +288,7 @@ export async function createInternalGeneration(req: InternalCreateGenerationRequ
   // No await between the breaker counts above, this insert and the charge
   // insert below -- node:sqlite is synchronous, so admission cannot be
   // interleaved by a concurrent request (see db/connection.ts).
-  const { row, created } = generationsRepo.insertGenerationIfWithinLimit(skeleton, config.maxGenerationsPerSession);
+  const { row, created } = generationsRepo.insertGenerationIfWithinLimit(skeleton, config.maxInternalGenerationsPerSession);
   if (!created) return toInternalResponse(row);
   chargesRepo.insertCharge(
     row.id,

@@ -24,6 +24,21 @@ export interface InternalSourceRequest {
   sourceObjectKey: string;
 }
 
+/**
+ * Chosen-style flow (MEKKY 20261007100000). A discovery look renders the
+ * front photo in a catalog style; a final view renders the left, right or
+ * back photo in the style the customer locked by choosing a look. MEKKY
+ * derives both from its own job row -- never from mobile. Absent means a
+ * discovery front look (dispatchers older than the chosen-style flow).
+ */
+export type InternalGenerationKind = "discovery" | "final";
+export type InternalGenerationView = "front" | "left" | "right" | "back";
+
+export interface InternalGenerationShape {
+  kind: InternalGenerationKind;
+  view: InternalGenerationView;
+}
+
 export interface InternalCreateGenerationRequest {
   /** Opaque MEKKY-supplied identifier. Carries no authorization weight inside Chuku — see security/internal-auth.ts. */
   externalOwnerId: string;
@@ -34,6 +49,7 @@ export interface InternalCreateGenerationRequest {
   /** Correlation/replay metadata only — NOT the idempotency key. See mission section 6. */
   operationId: string;
   style: { key: string };
+  generation?: InternalGenerationShape;
   source: InternalSourceRequest;
 }
 

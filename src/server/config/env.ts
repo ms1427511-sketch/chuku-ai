@@ -109,6 +109,10 @@ export const config = {
   // Shared secret gating every /internal/* route. Never committed, never
   // logged, never sent to a browser. See security/internal-auth.ts.
   internalAuthSecret: process.env.CHUKU_INTERNAL_AUTH_SECRET?.trim() || null,
+  // Backstop for MEKKY's own per-session cap (3 discovery looks + left,
+  // right and back final views). Separate from the Lab's
+  // maxGenerationsPerSession so neither limit moves the other.
+  maxInternalGenerationsPerSession: positiveInt(process.env.CHUKU_MAX_INTERNAL_GENERATIONS_PER_SESSION, 6),
   // Host allowlist for the MEKKY-issued Supabase signed source URL. Chuku
   // will refuse to fetch a source from any origin not in this list — see
   // security/source-fetch.ts.

@@ -229,3 +229,20 @@ a bounded poll loop (not an unbounded one, even though LightX's own
 `maxRetriesAllowed` already bounds it), and downloads the result image to
 local disk immediately rather than treating the returned URL as permanent
 storage.
+
+## Final views of a chosen look (MEKKY chosen-style flow)
+
+Checked against docs.lightxeditor.com on 2026-10-07: `/v2/hairstyle` takes
+one `imageUrl` and one `textPrompt` — no reference image of a previous
+result and no control over consistency across several images. The
+`image2image` endpoint's optional style image blends colours, textures and
+composition, not haircut geometry, so it is not used.
+
+For MEKKY's left, right and back final views the service therefore sends
+each angle's own photo with a text prompt built from the same catalog entry
+as the chosen look, plus `LOCKED_STYLE_CONSTRAINTS` (do not redesign, do
+not move the fade, do not change the top, hairline treatment or density;
+only adapt to the camera angle) and the usual preservation constraints
+(`src/server/services/preservation-prompt.ts`). MEKKY guarantees which
+style is sent; the provider does not guarantee that the haircut it renders
+on each angle exactly matches the chosen front look.

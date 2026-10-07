@@ -264,19 +264,21 @@ describe("POST /internal/generations — external-id idempotency", () => {
     expect(createGenerationSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("enforces the generation hard cap of 5 per session", async () => {
-    for (let i = 0; i < 5; i++) {
+  // MEKKY's chosen-style flow spends up to 6 operations per session (3
+  // looks + left, right, back); the internal backstop is 6, not the Lab's 5.
+  it("enforces the internal generation hard cap of 6 per session", async () => {
+    for (let i = 0; i < 6; i++) {
       const res = await request("POST", "/internal/generations", {
         headers: authHeaders(),
         body: createBody({ externalGenerationId: `gen-cap-${i}`, operationId: `op-cap-${i}` }),
       });
       expect(res.status).toBe(202);
     }
-    const sixth = await request("POST", "/internal/generations", {
+    const seventh = await request("POST", "/internal/generations", {
       headers: authHeaders(),
       body: createBody({ externalGenerationId: "gen-cap-over", operationId: "op-cap-over" }),
     });
-    expect(sixth.status).toBe(429);
+    expect(seventh.status).toBe(429);
   });
 });
 
